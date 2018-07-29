@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<script src="https://obniz.io/js/jquery-3.2.1.min.js"></script>
 <title></title>
 </head>
 
@@ -23,6 +24,8 @@
 </form>
 
 <script>
+var gcserver = "http://gamecon.japaneast.cloudapp.azure.com:1880/post";
+
 var accelerometer_device;
 var accelerometer_characteristic;
 
@@ -97,9 +100,13 @@ function connect() {
 }
 function onBtnAValueChanged(event) {
     console.log("btnA: " + event.target.value.getUint8(0));
+    payload = {mesh:1};
+    $.post( gcserver, payload);
 }
 function onBtnBValueChanged(event) {
     console.log("btnB: " + event.target.value.getUint8(0));
+    payload = {mesh:2};
+    $.post( gcserver, payload);
 }
 function onAccelerometerValueChanged(event) {
     AcceleratorX = event.target.value.getInt16(0, true) / 1000;
@@ -122,6 +129,15 @@ function onAccelerometerValueChanged(event) {
     document.js.tz.value = tz;
     document.js.a.value = a;
     // console.log("a: " + a + " ,tx:" + tx + " ,ty:" + ty + " ,tz:" + tz);
+
+    if (AcceleratorX < -0.4){
+      payload = {mesh:1};
+      $.post( gcserver, payload);
+    }
+    if (AcceleratorX > 0.4){
+      payload = {mesh:2};
+      $.post( gcserver, payload);
+    }
 }
 
 function disconnect() {
