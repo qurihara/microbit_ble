@@ -24,7 +24,7 @@
 </form>
 
 <script>
-var gcserver = "http://gamecon.japaneast.cloudapp.azure.com:1880/post";
+var gcserver = "https://gamecon.azurewebsites.net/post_dsl4gc_keyboard";
 
 var accelerometer_device;
 var accelerometer_characteristic;
@@ -99,15 +99,22 @@ function connect() {
 
 }
 function onBtnAValueChanged(event) {
-    console.log("btnA: " + event.target.value.getUint8(0));
-    payload = {mesh:1};
-    $.post( gcserver, payload);
+    let btn = event.target.value.getUint8(0);
+    console.log("btnA: " + btn);
+    if (btn === 1){
+      payload = {dsl4gc:JSON.stringify([{"key":["Space"],"mod":[],"dur":2}])};
+      $.post( gcserver, payload);
+    }
 }
 function onBtnBValueChanged(event) {
-    console.log("btnB: " + event.target.value.getUint8(0));
-    payload = {mesh:2};
-    $.post( gcserver, payload);
+    let btn = event.target.value.getUint8(0);
+    console.log("btnB: " + btn);
+    if (btn === 1){
+      payload = {dsl4gc:JSON.stringify([{"key":["Space"],"mod":[],"dur":2}])};
+      $.post( gcserver, payload);
+    }
 }
+var state = 0;
 function onAccelerometerValueChanged(event) {
     AcceleratorX = event.target.value.getInt16(0, true) / 1000;
     AcceleratorY = event.target.value.getInt16(2, true) / 1000;
@@ -130,13 +137,28 @@ function onAccelerometerValueChanged(event) {
     document.js.a.value = a;
     // console.log("a: " + a + " ,tx:" + tx + " ,ty:" + ty + " ,tz:" + tz);
 
+    let newstate = 0;
     if (AcceleratorX < -0.4){
-      payload = {mesh:1};
-      $.post( gcserver, payload);
-    }
-    if (AcceleratorX > 0.4){
-      payload = {mesh:2};
-      $.post( gcserver, payload);
+      newstate = 1;
+      if (state !== newstate){
+        payload = {dsl4gc:JSON.stringify([{"key":["ArrowLeft"],"mod":[],"dur":-1}])};
+        $.post( gcserver, payload);
+        state = newstate;
+      }
+    }else if (AcceleratorX > 0.4){
+      newstate = 2;
+      if (state !== newstate){
+        payload = {dsl4gc:JSON.stringify([{"key":["ArrowRight"],"mod":[],"dur":-1}])};
+        $.post( gcserver, payload);
+        state = newstate;
+      }
+    }else{
+      newstate = 0;
+      if (state !== newstate){
+        payload = {dsl4gc:JSON.stringify([{"key":[],"mod":[],"dur":-1}])};
+        $.post( gcserver, payload);
+        state = newstate;
+      }
     }
 }
 
