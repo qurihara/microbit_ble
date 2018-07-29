@@ -13,6 +13,11 @@
 <input type="text" name="x" value="" />
 <input type="text" name="y" value="" />
 <input type="text" name="z" value="" />
+<br>
+<input type="text" name="tx" value="" />
+<input type="text" name="ty" value="" />
+<input type="text" name="tz" value="" />
+<input type="text" name="a" value="" />
 </form>
 
 <script>
@@ -23,13 +28,19 @@ var accelerometer_characteristic;
 var ACCELEROMETERSERVICE_SERVICE_UUID       = 'e95d0753-251d-470a-a062-fa1922dfa9a8';
 var ACCELEROMETERDATA_CHARACTERISTIC_UUID   = 'e95dca4b-251d-470a-a062-fa1922dfa9a8';
 
+var BUTTONSERVICE_SERVICE_UUID       = 'e95d9882-251d-470a-a062-fa1922dfa9a8';
+var BUTTON_A_STATE_CHARACTERISTIC_UUID   = 'e95dda90-251d-470a-a062-fa1922dfa9a8';
+var BUTTON_B_STATE_CHARACTERISTIC_UUID   = 'e95dda91-251d-470a-a062-fa1922dfa9a8';
+
 
 function connect() {
+  var _server;
+  var _service;
   navigator.bluetooth.requestDevice({
     filters: [{
       namePrefix: 'BBC micro:bit',
     }],
-    optionalServices: [ACCELEROMETERSERVICE_SERVICE_UUID]
+    optionalServices: [ACCELEROMETERSERVICE_SERVICE_UUID,BUTTONSERVICE_SERVICE_UUID]
   })
   .then(device => {
     accelerometer_device = device;
@@ -38,6 +49,7 @@ function connect() {
   })
   //ACCELEROMETER
   .then(server =>{
+    _server = server;
     console.log("server", server)
     return server.getPrimaryService(ACCELEROMETERSERVICE_SERVICE_UUID);
   })
@@ -47,30 +59,70 @@ function connect() {
   })
   .then(chara => {
     console.log("ACCELEROMETER:", chara)
-    alert("BLE接続が完了しました。");
+    // alert("acce-BLE接続が完了しました。");
     characteristic = chara;
     characteristic.startNotifications();
     characteristic.addEventListener('characteristicvaluechanged',onAccelerometerValueChanged);
+
+    return _server.getPrimaryService(BUTTONSERVICE_SERVICE_UUID);
+  })
+  .then(service => {
+    _service = service;
+    console.log("service", service)
+    return service.getCharacteristic(BUTTON_A_STATE_CHARACTERISTIC_UUID);
+  })
+  .then(chara => {
+    console.log("BUTTON_A:", chara)
+    // alert("btn-BLE接続が完了しました。");
+    characteristic = chara;
+    characteristic.startNotifications();
+    characteristic.addEventListener('characteristicvaluechanged',onBtnAValueChanged);
+
+    return _service.getCharacteristic(BUTTON_B_STATE_CHARACTERISTIC_UUID);
+  })
+  .then(chara => {
+    console.log("BUTTON_B:", chara)
+    alert("BLE接続が完了しました。");
+    characteristic = chara;
+    characteristic.startNotifications();
+    characteristic.addEventListener('characteristicvaluechanged',onBtnBValueChanged);
   })
   .catch(error => {
     alert("BLE接続に失敗しました。もう一度試してみてください");
     console.log(error);
   });
-}
 
+}
+function onBtnAValueChanged(event) {
+    console.log("btnA: " + event.target.value.getUint8(0));
+}
+function onBtnBValueChanged(event) {
+    console.log("btnB: " + event.target.value.getUint8(0));
+}
 function onAccelerometerValueChanged(event) {
     AcceleratorX = event.target.value.getUint16(0)/1000.0;
-    console.log('x:' + AcceleratorX);
+    // console.log('x:' + AcceleratorX);
     document.js.x.value = AcceleratorX;
 
     AcceleratorY = event.target.value.getUint16(2)/1000.0;
-    console.log('y:' + AcceleratorY);
+    // console.log('y:' + AcceleratorY);
     document.js.y.value = AcceleratorY;
 
     AcceleratorZ = event.target.value.getUint16(4)/1000.0;
-    console.log('z:' + AcceleratorZ);
+    // console.log('z:' + AcceleratorZ);
     document.js.z.value = AcceleratorZ;
 
+    // console.log('x:' + AcceleratorX + ', y:' + AcceleratorY + ', z:' + AcceleratorZ);
+
+    var a = Math.sqrt(AcceleratorX**2 + AcceleratorY**2 + AcceleratorZ**2);
+    var tx = Math.atan2(AcceleratorX, Math.sqrt(AcceleratorY**2 + AcceleratorZ**2)) * 180/Math.PI;
+    var ty = Math.atan2(AcceleratorY, Math.sqrt(AcceleratorZ**2 + AcceleratorX**2)) * 180/Math.PI;
+    var tz = Math.atan2(AcceleratorZ, Math.sqrt(AcceleratorX**2 + AcceleratorY**2)) * 180/Math.PI;
+    document.js.tx.value = tx;
+    document.js.ty.value = ty;
+    document.js.tz.value = tz;
+    document.js.a.value = a;
+    // console.log("a: " + a + " ,tx:" + tx + " ,ty:" + ty + " ,tz:" + tz);
 }
 
 function disconnect() {
