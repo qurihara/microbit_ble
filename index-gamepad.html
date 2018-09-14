@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<!-- <script src="https://obniz.io/js/jquery-3.2.1.min.js"></script> -->
+<title></title>
+</head>
+
+<body>
+<form name="js">
+<input type="button" value="connect" onclick="connect();"/>
+<input type="button" value="disconnect" onclick="disconnect();" />
+<br>
+<input type="text" name="x" value="" />
+<input type="text" name="y" value="" />
+<input type="text" name="z" value="" />
+<br>
+<input type="text" name="tx" value="" />
+<input type="text" name="ty" value="" />
+<input type="text" name="tz" value="" />
+<br>
+<input type="text" name="a" value="" />
+</form>
+
+<script>
+var gcserver = "https://gamecon.azurewebsites.net/post_dsl4gc_gamepad";
+
+var accelerometer_device;
+var accelerometer_characteristic;
+
+//micro:bit BLE UUID
+var ACCELEROMETERSERVICE_SERVICE_UUID       = 'e95d0753-251d-470a-a062-fa1922dfa9a8';
+var ACCELEROMETERDATA_CHARACTERISTIC_UUID   = 'e95dca4b-251d-470a-a062-fa1922dfa9a8';
+
+var BUTTONSERVICE_SERVICE_UUID       = 'e95d9882-251d-470a-a062-fa1922dfa9a8';
+var BUTTON_A_STATE_CHARACTERISTIC_UUID   = 'e95dda90-251d-470a-a062-fa1922dfa9a8';
+var BUTTON_B_STATE_CHARACTERISTIC_UUID   = 'e95dda91-251d-470a-a062-fa1922dfa9a8';
+
+
+function connect() {
+  var _server;
+  var _service;
+  navigator.bluetooth.requestDevice({
+    filters: [{
+      namePrefix: 'BBC micro:bit',
+    }],
+    optionalServices: [ACCELEROMETERSERVICE_SERVICE_UUID,BUTTONSERVICE_SERVICE_UUID]
+  })
+  .then(device => {
+    accelerometer_device = device;
+    console.log("device", device);
+    return device.gatt.connect();
+  })
+  //ACCELEROMETER
+  .then(server =>{
+    _server = server;
+    console.log("server", server)
+    return server.getPrimaryService(ACCELEROMETERSERVICE_SERVICE_UUID);
+  })
+  .then(service => {
+    console.log("service", service)
+    return service.getCharacteristic(ACCELEROMETERDATA_CHARACTERISTIC_UUID)
+  })
+  .then(chara => {
+    console.log("ACCELEROMETER:", chara)
+    // alert("acce-BLE接続が完了しました。");
+    characteristic = chara;
+    characteristic.startNotifications();
+    characteristic.addEventListener('characteristicvaluechanged',onAccelerometerValueChanged);
+
+    return _server.getPrimaryService(BUTTONSERVICE_SERVICE_UUID);
+  })
+  .then(service => {
+    _service = service;
+    console.log("service", service)
+    return service.getCharacteristic(BUTTON_A_STATE_CHARACTERISTIC_UUID);
+  })
+  .then(chara => {
+    console.log("BUTTON_A:", chara)
+    // alert("btn-BLE接続が完了しました。");
+    characteristic = chara;
+    characteristic.startNotifications();
+    characteristic.addEventListener('characteristicvaluechanged',onBtnAValueChanged);
+
+    return _service.getCharacteristic(BUTTON_B_STATE_CHARACTERISTIC_UUID);
+  })
+  .then(chara => {
+    console.log("BUTTON_B:", chara)
+    // alert("BLE接続が完了しました。");
+    characteristic = chara;
+    characteristic.startNotifications();
+    characteristic.addEventListener('characteristicvaluechanged',onBtnBValueChanged);
+  })
+  .catch(error => {
+    alert("BLE接続に失敗しました。もう一度試してみてください");
+    console.log(error);
+  });
+
+}
+function onBtnAValueChanged(event) {
+    let btn = event.target.value.getUint8(0);
+    console.log("btnA: " + btn);
+    if (btn === 1){
+      payload = {dsl4gc:JSON.stringify([{"dpad":state, "btn":[0],"ang":[0,0,0,0],"dur":-1}])};
+      $.post( gcserver, payload);
+    }else{
+      payload = {dsl4gc:JSON.stringify([{"dpad":state, "btn":[],"ang":[0,0,0,0],"dur":-1}])};
+      $.post( gcserver, payload);
+    }
+}
+function onBtnBValueChanged(event) {
+    let btn = event.target.value.getUint8(0);
+    console.log("btnB: " + btn);
+    if (btn === 1){
+      payload = {dsl4gc:JSON.stringify([{"dpad":state, "btn":[1],"ang":[0,0,0,0],"dur":-1}])};
+      $.post( gcserver, payload);
+    }else{
+      payload = {dsl4gc:JSON.stringify([{"dpad":state, "btn":[0],"ang":[0,0,0,0],"dur":-1}])};
+      $.post( gcserver, payload);
+    }
+}
+var state = 5;
+function onAccelerometerValueChanged(event) {
+    AcceleratorX = event.target.value.getInt16(0, true) / 1000;
+    AcceleratorY = event.target.value.getInt16(2, true) / 1000;
+    AcceleratorZ = event.target.value.getInt16(4, true) / 1000;
+
+    document.js.x.value = AcceleratorX;
+    document.js.y.value = AcceleratorY;
+    document.js.z.value = AcceleratorZ;
+    // console.log('x:' + AcceleratorX + ', y:' + AcceleratorY + ', z:' + AcceleratorZ);
+
+    var a = Math.sqrt(AcceleratorX**2 + AcceleratorY**2 + AcceleratorZ**2);
+
+    var tx = Math.atan2(AcceleratorX, Math.sqrt(AcceleratorY**2 + AcceleratorZ**2)) * 180.0/Math.PI;
+    var ty = Math.atan2(AcceleratorY, Math.sqrt(AcceleratorZ**2 + AcceleratorX**2)) * 180.0/Math.PI;
+    var tz = Math.atan2(AcceleratorZ, Math.sqrt(AcceleratorX**2 + AcceleratorY**2)) * 180.0/Math.PI;
+
+    document.js.tx.value = tx;
+    document.js.ty.value = ty;
+    document.js.tz.value = tz;
+    document.js.a.value = a;
+    // console.log("a: " + a + " ,tx:" + tx + " ,ty:" + ty + " ,tz:" + tz);
+
+    let newstate = 5;
+    if (AcceleratorX < -0.4){
+      newstate = 4;
+      if (state !== newstate){
+        payload = {dsl4gc:JSON.stringify([{"dpad":4, "btn":[],"ang":[0,0,0,0],"dur":-1}])};
+        $.post( gcserver, payload);
+        state = newstate;
+      }
+    }else if (AcceleratorX > 0.4){
+      newstate = 6;
+      if (state !== newstate){
+        payload = {dsl4gc:JSON.stringify([{"dpad":6, "btn":[],"ang":[0,0,0,0],"dur":-1}])};
+        $.post( gcserver, payload);
+        state = newstate;
+      }
+    }else{
+      newstate = 5;
+      if (state !== newstate){
+        payload = {dsl4gc:JSON.stringify([{"dpad":5, "btn":[],"ang":[0,0,0,0],"dur":-1}])};
+        $.post( gcserver, payload);
+        state = newstate;
+      }
+    }
+}
+
+function disconnect() {
+  if (!accelerometer_device || !accelerometer_device.gatt.connected) return ;
+  accelerometer_device.gatt.disconnect();
+  alert("BLE接続を切断しました。")
+}
+
+</script>
+</body>
+</html>
