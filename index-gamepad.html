@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-<!-- <script src="https://obniz.io/js/jquery-3.2.1.min.js"></script> -->
+<script src="https://obniz.io/js/jquery-3.2.1.min.js"></script>
 <title></title>
 </head>
 
@@ -24,7 +24,8 @@
 </form>
 
 <script>
-var gcserver = "https://gamecon.azurewebsites.net/post_dsl4gc_gamepad";
+//var gcserver = "https://gamecon.azurewebsites.net/post_dsl4gc_gamepad";
+var gcserver = "http://172.20.10.3:1880/post_dsl4gc_gamepad";
 
 var accelerometer_device;
 var accelerometer_characteristic;
@@ -116,7 +117,7 @@ function onBtnBValueChanged(event) {
       payload = {dsl4gc:JSON.stringify([{"dpad":state, "btn":[1],"ang":[0,0,0,0],"dur":-1}])};
       $.post( gcserver, payload);
     }else{
-      payload = {dsl4gc:JSON.stringify([{"dpad":state, "btn":[0],"ang":[0,0,0,0],"dur":-1}])};
+      payload = {dsl4gc:JSON.stringify([{"dpad":state, "btn":[],"ang":[0,0,0,0],"dur":-1}])};
       $.post( gcserver, payload);
     }
 }
